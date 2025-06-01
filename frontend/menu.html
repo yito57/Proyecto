@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Menú Principal</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        #tablaPerfiles, #tablaPerfiles th, #tablaPerfiles td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        #tablaPerfiles th, #tablaPerfiles td {
+            padding: 8px;
+        }
+    </style>
+</head>
+    <table id="tablaPerfiles">
+    <h1>Bienvenido al sistema 👋</h1>
+    <ul>
+        <li><a href="perfil.html">Gestión Perfil</a></li>
+        <li><a href="usuario.html">Gestión Usuario</a></li>
+        <li><a href="persona.html">Gestión Persona</a></li>
+    </ul>
+
+    <h2>Perfiles Activos</h2>
+    <table border="1" id="tablaPerfiles">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Los perfiles se cargarán aquí -->
+        </tbody>
+    </table>
+    <p id="mensaje"></p>
+
+    <script>
+        window.onload = function() {
+            fetch("http://localhost:3000/perfil")
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.querySelector("#tablaPerfiles tbody");
+                    tbody.innerHTML = "";
+                    if (Array.isArray(data) && data.length > 0) {
+                        data.forEach(perfil => {
+                            const tr = document.createElement("tr");
+                            tr.innerHTML = `
+                                <td>${perfil.id}</td>
+                                <td>${perfil.nombre}</td>
+                                <td>${perfil.descripcion || ''}</td>
+                                <td>${perfil.estado}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        document.getElementById("mensaje").innerText = "No hay perfiles activos.";
+                    }
+                })
+                .catch(error => {
+                    console.error("Error al obtener perfiles:", error);
+                    document.getElementById("mensaje").innerText = "Error al cargar perfiles.";
+                });
+        };
+    </script>
+</body>
+</html>
+<!--             "Content-Type": "application/json"
+ -->

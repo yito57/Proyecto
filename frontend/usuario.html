@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión Usuario</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .usuario-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .usuario-item strong { flex: 1; }
+        .usuario-item button { padding: 4px 10px; }
+        #formUsuario { margin-bottom: 24px; }
+        #usuario, #contrasena, #id_persona, #id_perfil { padding: 6px; width: 180px; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <h1>CRUD de Usuario</h1>
+    <form id="formUsuario">
+        <input type="hidden" id="usuarioId">
+        <input type="text" id="usuario" placeholder="Usuario" required>
+        <input type="text" id="contrasena" placeholder="Contraseña" required><br><br>
+        <input type="number" id="id_persona" placeholder="ID Persona" required>
+        <input type="number" id="id_perfil" placeholder="ID Perfil" required><br><br>
+        <button type="submit">Guardar</button>
+        <button type="button" id="cancelarEdicion" style="display:none;">Cancelar</button>
+    </form>
+    <h3>Usuarios Activos</h3>
+    <ul id="listaUsuarios"></ul>
+    <p id="mensaje"></p>
+    <script>
+        const form = document.getElementById('formUsuario');
+        const lista = document.getElementById('listaUsuarios');
+        const mensaje = document.getElementById('mensaje');
+        const cancelarBtn = document.getElementById('cancelarEdicion');
+
+        function mostrarMensaje(msg, tiempo = 2000) {
+            mensaje.innerText = msg;
+            setTimeout(() => mensaje.innerText = '', tiempo);
+        }
+
+        function cargarUsuarios() {
+            fetch('http://localhost:3000/usuario')
+                .then(res => res.json())
+                .then(data => {
+                    lista.innerHTML = '';
+                    if (data.length === 0) {
+                        lista.innerHTML = '<li>No hay usuarios activos.</li>';
+                        return;
+                    }
+                    data.forEach(u => {
+                        const li = document.createElement('li');
+                        li.className = 'usuario-item';
+                        li.innerHTML = `
+                            <strong>${u.usuario}</strong> (Perfil: ${u.perfil}, Persona: ${u.persona})
+                            <button type="button" onclick="editarUsuario(${u.id}, '${u.usuario.replace(/'/g, "&#39;")}', '${u.contrasena.replace(/'/g, "&#39;")}', '${u.perfil.replace(/'/g, "&#39;")}', '${u.persona.replace(/'/g, "&#39;")}')">Editar</button>
+                            <button type="button" onclick="eliminarUsuario(${u.id})">Eliminar</button>
+                        `;
+                        lista.appendChild(li);
+                    });
+                });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('usuarioId').value;
+            const datos = {
+                usuario: document.getElementById('usuario').value.trim(),
+                contrasena: document.getElementById('contrasena').value.trim(),
+                id_persona: parseInt(document.getElementById('id_persona').value),
+                id_perfil: parseInt(document.getElementById('id_perfil').value)
+            };
+            if (!datos.usuario || !datos.contrasena || isNaN(datos.id_persona) || isNaN(datos.id_perfil)) {
+                mostrarMensaje('Todos los campos son obligatorios');
+                return;
+            }
+            const url = id ? `http://localhost:3000/usuario/${id}` : `http://localhost:3000/usuario`;
+            const metodo = id ? 'PUT' : 'POST';
+            fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            })
+            .then(res => res.json())
+            .then(data => {
+                mostrarMensaje(data.mensaje || 'Operación realizada');
+                form.reset();
+                cancelarBtn.style.display = 'none';
+                cargarUsuarios();
+            });
+        });
+
+        window.editarUsuario = function(id, usuario, contrasena, perfil, persona) {
+            document.getElementById('usuarioId').value = id;
+            document.getElementById('usuario').value = usuario;
+            document.getElementById('contrasena').value = contrasena;
+            // id_persona y id_perfil no se pueden editar directamente desde la lista, deben ser ingresados manualmente
+            cancelarBtn.style.display = 'inline-block';
+        }
+
+        window.eliminarUsuario = function(id) {
+            if (confirm('¿Seguro que deseas eliminar este usuario?')) {
+                fetch(`http://localhost:3000/usuario/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        mostrarMensaje(data.mensaje || 'Usuario eliminado');
+                        cargarUsuarios();
+                    });
+            }
+        }
+
+        cancelarBtn.addEventListener('click', () => {
+            form.reset();
+            cancelarBtn.style.display = 'none';
+        });
+
+        cargarUsuarios();
+    </script>
+</body>
+</html>

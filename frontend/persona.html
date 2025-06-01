@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión Persona</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .persona-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .persona-item strong { flex: 1; }
+        .persona-item button { padding: 4px 10px; }
+        #formPersona { margin-bottom: 24px; }
+        #nombrePersona, #correoPersona { padding: 6px; width: 180px; margin-bottom: 6px; }
+    </style>
+</head>
+<body>
+    <h1>CRUD de Persona</h1>
+    <form id="formPersona">
+        <input type="hidden" id="personaId">
+        <input type="text" id="nombrePersona" placeholder="Nombre" required>
+        <input type="email" id="correoPersona" placeholder="Correo" required>
+        <button type="submit">Guardar</button>
+        <button type="button" id="cancelarEdicion" style="display:none;">Cancelar</button>
+    </form>
+    <h3>Personas Activas</h3>
+    <ul id="listaPersonas"></ul>
+    <p id="mensaje"></p>
+    <script>
+        const form = document.getElementById('formPersona');
+        const lista = document.getElementById('listaPersonas');
+        const mensaje = document.getElementById('mensaje');
+        const cancelarBtn = document.getElementById('cancelarEdicion');
+
+        function mostrarMensaje(msg, tiempo = 2000) {
+            mensaje.innerText = msg;
+            setTimeout(() => mensaje.innerText = '', tiempo);
+        }
+
+        function cargarPersonas() {
+            fetch('http://localhost:3000/persona')
+                .then(res => res.json())
+                .then(data => {
+                    lista.innerHTML = '';
+                    if (data.length === 0) {
+                        lista.innerHTML = '<li>No hay personas activas.</li>';
+                        return;
+                    }
+                    data.forEach(p => {
+                        const li = document.createElement('li');
+                        li.className = 'persona-item';
+                        li.innerHTML = `
+                            <strong>${p.nombre}</strong> (${p.correo})
+                            <button type="button" onclick="editarPersona(${p.id}, '${p.nombre.replace(/'/g, "&#39;")}', '${p.correo.replace(/'/g, "&#39;")}')">Editar</button>
+                            <button type="button" onclick="eliminarPersona(${p.id})">Eliminar</button>
+                        `;
+                        lista.appendChild(li);
+                    });
+                });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('personaId').value;
+            const datos = {
+                nombre: document.getElementById('nombrePersona').value.trim(),
+                correo: document.getElementById('correoPersona').value.trim()
+            };
+            if (!datos.nombre || !datos.correo) {
+                mostrarMensaje('Todos los campos son obligatorios');
+                return;
+            }
+            const url = id ? `http://localhost:3000/persona/${id}` : `http://localhost:3000/persona`;
+            const metodo = id ? 'PUT' : 'POST';
+            fetch(url, {
+                method: metodo,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            })
+            .then(res => res.json())
+            .then(data => {
+                mostrarMensaje(data.mensaje || 'Operación realizada');
+                form.reset();
+                cancelarBtn.style.display = 'none';
+                cargarPersonas();
+            });
+        });
+
+        window.editarPersona = function(id, nombre, correo) {
+            document.getElementById('personaId').value = id;
+            document.getElementById('nombrePersona').value = nombre;
+            document.getElementById('correoPersona').value = correo;
+            cancelarBtn.style.display = 'inline-block';
+        }
+
+        window.eliminarPersona = function(id) {
+            if (confirm('¿Seguro que deseas eliminar esta persona?')) {
+                fetch(`http://localhost:3000/persona/${id}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        mostrarMensaje(data.mensaje || 'Persona eliminada');
+                        cargarPersonas();
+                    });
+            }
+        }
+
+        cancelarBtn.addEventListener('click', () => {
+            form.reset();
+            cancelarBtn.style.display = 'none';
+        });
+
+        cargarPersonas();
+    </script>
+</body>
+</html>

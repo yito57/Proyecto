@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Perfiles</title>
+    <link rel="stylesheet" href="estilos.css">
+    <style>
+        .perfil-item { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .perfil-item strong { flex: 1; }
+        .perfil-item button { padding: 4px 10px; }
+        #formPerfil { margin-bottom: 24px; }
+        #nombrePerfil { padding: 6px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>CRUD de Perfil</h1>
+    <form id="formPerfil">
+        <input type="hidden" id="perfilId">
+        <input type="text" id="nombrePerfil" placeholder="Nombre del perfil" required>
+        <button type="submit">Guardar</button>
+        <button type="button" id="cancelarEdicion" style="display:none;">Cancelar</button>
+    </form>
+    <h3>Perfiles Activos</h3>
+    <ul id="listaPerfiles"></ul>
+    <p id="mensaje"></p>
+    <script>
+        const form = document.getElementById('formPerfil');
+        const lista = document.getElementById('listaPerfiles');
+        const mensaje = document.getElementById('mensaje');
+        const cancelarBtn = document.getElementById('cancelarEdicion');
+
+        function mostrarMensaje(msg, tiempo = 2000) {
+            mensaje.innerText = msg;
+            setTimeout(() => mensaje.innerText = '', tiempo);
+        }
+
+        function cargarPerfiles() {
+            fetch('http://localhost:3000/perfil')
+                .then(res => res.json())
+                .then(data => {
+                    lista.innerHTML = '';
+                    if (data.length === 0) {
+                        lista.innerHTML = '<li>No hay perfiles activos.</li>';
+                        return;
+                    }
+                    data.forEach(perfil => {
+                        const li = document.createElement('li');
+                        li.className = 'perfil-item';
+                        li.innerHTML = `
+                            <strong>${perfil.nombre}</strong>
+                            <button type="button" onclick="editarPerfil(${perfil.id}, '${perfil.nombre.replace(/'/g, "&#39;")}")">Editar</button>
+                            <button type="button" onclick="eliminarPerfil(${perfil.id})">Eliminar</button>
+                        `;
+                        lista.appendChild(li);
+                    });
+                });
+        }
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('perfilId').value;
+            const nombre = document.getElementById('nombrePerfil').value.trim();
+            if (!nombre) {
+                mostrarMensaje('El nombre es obligatorio');
+                return;
+            }
+            if (id) {
+                fetch(`http://localhost:3000/perfil/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    mostrarMensaje(data.mensaje || 'Perfil actualizado');
+                    form.reset();
+                    cancelarBtn.style.display = 'none';
+                    cargarPerfiles();
+                });
+            } else {
+                fetch('http://localhost:3000/perfil', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    mostrarMensaje(data.mensaje || 'Perfil creado');
+                    form.reset();
+                    cargarPerfiles();
+                });
+            }
+        });
+
+        window.editarPerfil = function(id, nombre) {
+            document.getElementById('perfilId').value = id;
+            document.getElementById('nombrePerfil').value = nombre;
+            cancelarBtn.style.display = 'inline-block';
+        }
+
+        window.eliminarPerfil = function(id) {
+            if (confirm('¿Seguro que deseas eliminar este perfil?')) {
+                fetch(`http://localhost:3000/perfil/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(res => res.json())
+                .then(data => {
+                    mostrarMensaje(data.mensaje || 'Perfil eliminado');
+                    cargarPerfiles();
+                });
+            }
+        }
+
+        cancelarBtn.addEventListener('click', () => {
+            form.reset();
+            cancelarBtn.style.display = 'none';
+        });
+
+        cargarPerfiles();
+    </script>
+</body>
+</html>
